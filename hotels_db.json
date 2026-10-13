@@ -1,0 +1,16 @@
+{
+  "hotel_grand_palace": {
+    "name": "Grand Palace Hotel",
+    "email": "reception@grandpalace.com",
+    "details": "Check-in: 2:00 PM | Check-out: 11:00 AM. Amenities: Free Swimming Pool (7 AM - 9 PM), Gym, High-speed Wi-Fi. Breakfast served from 8 AM to 10 AM.",
+    "pricing": "Standard Room: $100/night, Deluxe Room: $150/night, Suite: $250/night.",
+    "rules": "No smoking inside rooms. Pets allowed with a $20 extra cleaning charge."
+  },
+  "hotel_sea_view": {
+    "name": "Sea View Resort",
+    "email": "booking@seaviewresort.com",
+    "details": "Check-in: 3:00 PM | Check-out: 12:00 PM. Amenities: Private Beach Access, Rooftop Bar, Spa, Airport Shuttle service.",
+    "pricing": "Ocean Suite: $250/night, Beach Villa: $400/night.",
+    "rules": "Strict cancellation policy: 48 hours in advance required for full refund."
+  }
+}
