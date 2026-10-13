@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 
 app = FastAPI()
 
+# Allow your hotel website domain to connect safely
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,28 +19,32 @@ app.add_middleware(
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 HOTEL_URL = "https://librishhotel.com/"
 
-# Global variable to store scraped content in memory so it replies instantly!
+# Cache variable to hold live website content in server memory
 CACHED_HOTEL_CONTENT = ""
 
-def load_hotel_content():
+def scrape_hotel_website():
+    """Dynamically reads and cleans text directly from https://librishhotel.com/"""
     global CACHED_HOTEL_CONTENT
     try:
-        headers = {"User-Agent": "Mozilla/5.0"}
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
         response = requests.get(HOTEL_URL, headers=headers, timeout=10)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
-            for script in soup(["script", "style", "nav", "footer"]):
-                script.extract()
+            
+            # Remove scripts, styles, navigation, and footers to keep text relevant
+            for element in soup(["script", "style", "nav", "footer", "header"]):
+                element.extract()
+                
             text = soup.get_text(separator=' ')
-            CACHED_HOTEL_CONTENT = " ".join(text.split())[:10000]
-            print("Successfully scraped and cached hotel website content!")
+            CACHED_HOTEL_CONTENT = " ".join(text.split())[:12000]
+            print("Successfully scraped live content from librishhotel.com!")
     except Exception as e:
-        print(f"Error scraping on startup: {e}")
+        print(f"Error scraping hotel website: {e}")
 
-# Scrape the website automatically the moment the server starts
+# Automatically scrape when the server boots up
 @app.on_event("startup")
 def startup_event():
-    load_hotel_content()
+    scrape_hotel_website()
 
 class ChatRequest(BaseModel):
     message: str
@@ -51,23 +56,24 @@ def chat_endpoint(req: ChatRequest):
 
     global CACHED_HOTEL_CONTENT
     if not CACHED_HOTEL_CONTENT:
-        load_hotel_content() # Fallback reload if empty
+        scrape_hotel_website()
 
-    # Build system instructions using the cached website memory
+    # Dynamic system prompt powered by your live website text
     system_prompt = f"""
-    You are the official AI Receptionist for Hotel The Librish (librishhotel.com).
-    Use ONLY the following live website text content to answer guest questions accurately:
+    You are the official, friendly AI Receptionist for Hotel The Librish (librishhotel.com).
+    Use ONLY the following live scraped website content to answer guest questions accurately:
 
-    [HOTEL WEBSITE DATA]
+    [LIVE WEBSITE CONTENT FROM LIBRISHHOTEL.COM]
     {CACHED_HOTEL_CONTENT}
 
     [BOOKING & LEAD INSTRUCTIONS]
-    If the guest wants to make a booking or reserve a room, politely ask for their:
+    If a guest wants to book a room or inquire about a reservation, politely ask for their:
     1. Full Name
-    2. Check-in & Check-out Dates
-    3. Phone Number or Email
-    Then reply: "Thank you! Our front desk team at Hotel The Librish has noted your request and will contact you directly to confirm your booking."
-    Do NOT invent prices or rules not found in the website data.
+    2. Preferred Room Type
+    3. Check-in & Check-out Dates
+    4. Phone Number or Email
+    Then reply: "Thank you! Our front desk team at Hotel The Librish has noted your booking request and will contact you shortly to confirm."
+    Do NOT invent prices or details not found in the live website content. Keep answers polite and concise.
     """
 
     url = "https://api.groq.com/openai/v1/chat/completions"
