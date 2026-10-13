@@ -1,0 +1,135 @@
+<!-- Hotel Chatbot UI Widget -->
+<div id="hotel-chat-widget" style="position: fixed; bottom: 20px; right: 20px; z-index: 999999; font-family: Arial, sans-serif;">
+  <button onclick="toggleChatWindow()" style="background: #2563eb; color: white; border: none; padding: 14px 20px; border-radius: 30px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+    💬 Chat with Reception
+  </button>
+
+  <div id="chat-popup-box" style="display: none; width: 330px; height: 450px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; flex-direction: column; box-shadow: 0 6px 20px rgba(0,0,0,0.2); position: absolute; bottom: 65px; right: 0;">
+    <div style="background: #2563eb; color: white; padding: 14px; font-weight: bold; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between;">
+      <span>Hotel Assistant</span>
+      <span onclick="toggleChatWindow()" style="cursor: pointer;">✕</span>
+    </div>
+    <div id="chat-messages-area" style="flex: 1; padding: 12px; overflow-y: auto; font-size: 14px; background: #f9fafb;"></div>
+    <div style="display: flex; border-top: 1px solid #e5e7eb; background: white; border-radius: 0 0 12px 12px;">
+      <input type="text" id="chat-user-input" placeholder="Ask about rooms, timings..." onkeypress="handleKey(event)" style="flex: 1; border: none; padding: 12px; outline: none; font-size: 14px;">
+      <button onclick="sendChatMessage()" style="background: #2563eb; color: white; border: none; padding: 0 16px; cursor: pointer; font-weight: bold;">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= HOTEL AI CHAT WIDGET ================= -->
+<div id="hotel-ai-widget-container" style="position: fixed; bottom: 20px; right: 20px; z-index: 999999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  
+  <!-- Floating Toggle Button -->
+  <button id="ai-chat-toggle-btn" onclick="toggleHotelChat()" style="background: #2563eb; color: white; border: none; padding: 14px 22px; border-radius: 35px; cursor: pointer; font-weight: 600; font-size: 15px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4); display: flex; align-items: center; gap: 8px; transition: transform 0.2s ease;">
+    <span>💬 Chat with Reception</span>
+  </button>
+
+  <!-- Chat Window Box -->
+  <div id="ai-chat-window" style="display: none; width: 350px; height: 480px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 16px; flex-direction: column; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15); position: absolute; bottom: 65px; right: 0; overflow: hidden;">
+    
+    <!-- Header -->
+    <div style="background: #2563eb; color: white; padding: 16px; font-weight: 600; font-size: 16px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="width: 8px; height: 8px; background: #4ade80; border-radius: 50%; display: inline-block;"></span>
+        <span>The Librish Assistant</span>
+      </div>
+      <button onclick="toggleHotelChat()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0; line-height: 1;">✕</button>
+    </div>
+
+    <!-- Message History Area -->
+    <div id="ai-chat-messages" style="flex: 1; padding: 16px; overflow-y: auto; font-size: 14px; background: #f8fafc; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth;">
+      <div style="align-self: flex-start; background: #ffffff; color: #1e293b; padding: 10px 14px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 80%; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+        Hello! Welcome to Hotel The Librish. How can I assist you with your stay or booking today?
+      </div>
+    </div>
+
+    <!-- Input Footer -->
+    <div style="display: flex; border-top: 1px solid #e2e8f0; background: #ffffff; padding: 10px; gap: 8px; align-items: center;">
+      <input type="text" id="ai-chat-input" placeholder="Ask about rooms, timings..." onkeypress="handleChatKey(event)" style="flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; outline: none; font-size: 14px;">
+      <button onclick="sendUserMessage()" style="background: #2563eb; color: white; border: none; border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 600; font-size: 14px;">Send</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // CHANGE THIS TO YOUR LIVE RENDER BACKEND URL ENDING WITH /chat
+  const BACKEND_CHAT_URL = "https://hotel-ai-bot-w6cn.onrender.com/chat";
+
+  function toggleHotelChat() {
+    const chatWindow = document.getElementById('ai-chat-window');
+    const toggleBtn = document.getElementById('ai-chat-toggle-btn');
+    if (chatWindow.style.display === 'none' || chatWindow.style.display === '') {
+      chatWindow.style.display = 'flex';
+      toggleBtn.style.transform = 'scale(0.95)';
+      document.getElementById('ai-chat-input').focus();
+    } else {
+      chatWindow.style.display = 'none';
+      toggleBtn.style.transform = 'scale(1)';
+    }
+  }
+
+  function handleChatKey(e) {
+    if (e.key === 'Enter') sendUserMessage();
+  }
+
+  async function sendUserMessage() {
+    const inputField = document.getElementById('ai-chat-input');
+    const messageContainer = document.getElementById('ai-chat-messages');
+    const userText = inputField.value.trim();
+    if (!userText) return;
+
+    // User Message
+    messageContainer.innerHTML += `
+      <div style="align-self: flex-end; background: #2563eb; color: white; padding: 10px 14px; border-radius: 12px; max-width: 80%; word-break: break-word;">
+        ${escapeHtml(userText)}
+      </div>
+    `;
+    inputField.value = '';
+    messageContainer.scrollTop = messageContainer.scrollHeight;
+
+    // Typing Indicator
+    const typingId = 'typing-' + Date.now();
+    messageContainer.innerHTML += `
+      <div id="${typingId}" style="align-self: flex-start; background: #ffffff; color: #64748b; padding: 10px 14px; border-radius: 12px; border: 1px solid #e2e8f0; font-style: italic; font-size: 13px;">
+        Typing...
+      </div>
+    `;
+    messageContainer.scrollTop = messageContainer.scrollHeight;
+
+    try {
+      const response = await fetch(BACKEND_CHAT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userText })
+      });
+      const data = await response.json();
+      document.getElementById(typingId).remove();
+
+      // Convert line breaks (\n) into HTML breaks (<br>) for clean formatting
+      const formattedReply = escapeHtml(data.reply).replace(/\n/g, '<br>');
+
+      // Bot Reply Box with clean spacing
+      messageContainer.innerHTML += `
+        <div style="align-self: flex-start; background: #ffffff; color: #1e293b; padding: 12px 14px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 85%; word-break: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.05); line-height: 1.5;">
+          ${formattedReply}
+        </div>
+      `;
+    } catch (error) {
+      document.getElementById(typingId).remove();
+      messageContainer.innerHTML += `
+        <div style="align-self: flex-start; background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 12px; font-size: 13px;">
+          Connection error. Please try again later.
+        </div>
+      `;
+    }
+    messageContainer.scrollTop = messageContainer.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+  }
+</script>
+<!-- ================= END WIDGET ================= -->
