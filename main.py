@@ -77,6 +77,16 @@ def chat_endpoint(req: ChatRequest):
     }
 
     response = requests.post(url, json=payload, headers=headers)
+
+    # PRINT THE REAL ERROR TO RENDER LOGS FOR DEBUGGING
+    if response.status_code != 200:
+        print(f"Groq API Error Code: {response.status_code}")
+        print(f"Groq API Error Details: {response.text}")
+        return {"reply": f"API Error ({response.status_code}): {response.text}"}
+        
+    bot_reply = response.json()['choices'][0]['message']['content']
+    return {"reply": bot_reply}
+    
     if response.status_code == 200:
         bot_reply = response.json()['choices'][0]['message']['content']
         return {"reply": bot_reply}
