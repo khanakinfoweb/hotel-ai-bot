@@ -1,7 +1,15 @@
 (function () {
     const BACKEND_URL = "https://hotel-ai-bot-w6cn.onrender.com/chat";
+    
+    // Standard SaaS State using sessionStorage (clears automatically when the browser tab is closed)
+    let chatState = {
+        isOpen: false,
+        messages: JSON.parse(sessionStorage.getItem('librish_session_messages') || 'null') || [
+            { role: 'assistant', content: 'Hello! Welcome to Hotel The Librish. How can I assist you with your stay or booking today?' }
+        ]
+    };
 
-    // 1. Inject Styles
+    // 1. Inject CSS Styles
     const style = document.createElement('style');
     style.innerHTML = `
         #hotel-ai-widget-container * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
@@ -28,9 +36,6 @@
                 <button onclick="window.toggleHotelChat()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 0;">✕</button>
             </div>
             <div id="ai-chat-messages" style="flex: 1; padding: 16px; overflow-y: auto; font-size: 14px; background: #f8fafc; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth;">
-                <div style="align-self: flex-start; background: #ffffff; color: #1e293b; padding: 10px 14px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 80%; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    Hello! Welcome to Hotel The Librish. How can I assist you with your stay or booking today?
-                </div>
             </div>
             <div style="display: flex; border-top: 1px solid #e2e8f0; background: #ffffff; padding: 10px; gap: 8px; align-items: center;">
                 <input type="text" id="ai-chat-input" placeholder="Ask about rooms, timings..." onkeypress="if(event.key==='Enter')window.sendUserMessage()" style="flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 12px; outline: none; font-size: 14px;">
@@ -40,11 +45,43 @@
     `;
     document.body.appendChild(container);
 
-    // 3. Widget Functions
+    // 3. Standard UI Render Engine
+    function renderMessages() {
+        const messageContainer = document.getElementById('ai-chat-messages');
+        if (!messageContainer) return;
+
+        messageContainer.innerHTML = '';
+
+        chatState.messages.forEach(msg => {
+            const bubble = document.createElement('div');
+            if (msg.role === 'user') {
+                bubble.style.cssText = 'align-self: flex-end; background: #2563eb; color: white; padding: 10px 14px; border-radius: 12px; max-width: 80%; word-break: break-word;';
+                bubble.textContent = msg.content;
+            } else if (msg.role === 'assistant') {
+                bubble.style.cssText = 'align-self: flex-start; background: #ffffff; color: #1e293b; padding: 12px 14px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 85%; word-break: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.05); line-height: 1.5;';
+                bubble.innerHTML = escapeHtml(msg.content).replace(/\n/g, '<br>');
+            } else if (msg.role === 'loading') {
+                bubble.style.cssText = 'align-self: flex-start; background: #ffffff; color: #64748b; padding: 10px 14px; border-radius: 12px; border: 1px solid #e2e8f0; font-style: italic; font-size: 13px;';
+                bubble.textContent = 'Typing...';
+            }
+            messageContainer.appendChild(bubble);
+        });
+
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+        
+        // Save to sessionStorage (automatically cleared when the tab is closed)
+        sessionStorage.setItem('librish_session_messages', JSON.stringify(chatState.messages.filter(m => m.role !== 'loading')));
+    }
+
+    setTimeout(renderMessages, 100);
+
+    // 4. Controller Logic
     window.toggleHotelChat = function() {
         const chatWindow = document.getElementById('ai-chat-window');
         const toggleBtn = document.getElementById('ai-chat-toggle-btn');
-        if (chatWindow.style.display === 'none' || chatWindow.style.display === '') {
+        chatState.isOpen = !chatState.isOpen;
+        
+        if (chatState.isOpen) {
             chatWindow.style.display = 'flex';
             toggleBtn.style.transform = 'scale(0.95)';
             document.getElementById('ai-chat-input').focus();
@@ -56,25 +93,14 @@
 
     window.sendUserMessage = async function() {
         const inputField = document.getElementById('ai-chat-input');
-        const messageContainer = document.getElementById('ai-chat-messages');
         const userText = inputField.value.trim();
         if (!userText) return;
 
-        messageContainer.innerHTML += `
-            <div style="align-self: flex-end; background: #2563eb; color: white; padding: 10px 14px; border-radius: 12px; max-width: 80%; word-break: break-word;">
-                ${escapeHtml(userText)}
-            </div>
-        `;
+        chatState.messages.push({ role: 'user', content: userText });
         inputField.value = '';
-        messageContainer.scrollTop = messageContainer.scrollHeight;
-
-        const typingId = 'typing-' + Date.now();
-        messageContainer.innerHTML += `
-            <div id="${typingId}" style="align-self: flex-start; background: #ffffff; color: #64748b; padding: 10px 14px; border-radius: 12px; border: 1px solid #e2e8f0; font-style: italic; font-size: 13px;">
-                Typing...
-            </div>
-        `;
-        messageContainer.scrollTop = messageContainer.scrollHeight;
+        
+        chatState.messages.push({ role: 'loading', content: '' });
+        renderMessages();
 
         try {
             const response = await fetch(BACKEND_URL, {
@@ -83,23 +109,15 @@
                 body: JSON.stringify({ message: userText })
             });
             const data = await response.json();
-            document.getElementById(typingId).remove();
-
-            const formattedReply = escapeHtml(data.reply).replace(/\n/g, '<br>');
-            messageContainer.innerHTML += `
-                <div style="align-self: flex-start; background: #ffffff; color: #1e293b; padding: 12px 14px; border-radius: 12px; border: 1px solid #e2e8f0; max-width: 85%; word-break: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.05); line-height: 1.5;">
-                    ${formattedReply}
-                </div>
-            `;
+            
+            chatState.messages = chatState.messages.filter(m => m.role !== 'loading');
+            chatState.messages.push({ role: 'assistant', content: data.reply });
+            renderMessages();
         } catch (error) {
-            document.getElementById(typingId).remove();
-            messageContainer.innerHTML += `
-                <div style="align-self: flex-start; background: #fee2e2; color: #991b1b; padding: 10px 14px; border-radius: 12px; font-size: 13px;">
-                    Connection error. Please try again later.
-                </div>
-            `;
+            chatState.messages = chatState.messages.filter(m => m.role !== 'loading');
+            chatState.messages.push({ role: 'assistant', content: 'Connection error. Please try again later.' });
+            renderMessages();
         }
-        messageContainer.scrollTop = messageContainer.scrollHeight;
     };
 
     function escapeHtml(text) {
