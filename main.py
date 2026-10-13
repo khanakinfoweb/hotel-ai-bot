@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
@@ -45,6 +46,11 @@ def scrape_hotel_website():
 @app.on_event("startup")
 def startup_event():
     scrape_hotel_website()
+
+# Serve widget.js so websites can embed it using a single script tag
+@app.get("/widget.js")
+def serve_widget_script():
+    return FileResponse("widget.js", media_type="application/javascript")
 
 class ChatRequest(BaseModel):
     message: str
